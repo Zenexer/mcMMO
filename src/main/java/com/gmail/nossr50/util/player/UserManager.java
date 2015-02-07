@@ -2,6 +2,8 @@ package com.gmail.nossr50.util.player;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.Callable;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Entity;
@@ -12,6 +14,7 @@ import com.gmail.nossr50.mcMMO;
 import com.gmail.nossr50.datatypes.player.McMMOPlayer;
 
 import com.google.common.collect.ImmutableList;
+import org.bukkit.metadata.MetadataValue;
 
 public final class UserManager {
 
@@ -90,8 +93,21 @@ public final class UserManager {
         return retrieveMcMMOPlayer(playerName, true);
     }
 
-    public static McMMOPlayer getPlayer(Player player) {
-        return (McMMOPlayer) player.getMetadata(mcMMO.playerDataKey).get(0).value();
+    public static McMMOPlayer getPlayer(final Player player) {
+        List<MetadataValue> metadata = player.getMetadata(mcMMO.playerDataKey);
+
+        if (metadata.isEmpty()) {
+            mcMMO.p.getServer().getScheduler().callSyncMethod(mcMMO.p, new Callable() {
+                @Override
+                public Object call() throws Exception {
+                    player.kickPlayer("mcMMO error; please reconnect");
+                    return null;
+                }
+            });
+            throw new RuntimeException(String.format("Player %s is missing mcMMO metadata!", player.getName()));
+        }
+
+        return (McMMOPlayer) metadata.get(0).value();
     }
 
     private static McMMOPlayer retrieveMcMMOPlayer(String playerName, boolean offlineValid) {
